@@ -1,0 +1,80 @@
+\documentclass[12pt]{article}
+\usepackage[paper=letterpaper,margin=2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{newtxtext, newtxmath}
+\usepackage{enumitem}
+\usepackage{titling}
+\usepackage{float}
+\usepackage{blindtext, graphicx}
+\usepackage[colorlinks=true]{hyperref}
+
+\setlength{\droptitle}{-6em}
+
+% Enter the specific assignment number and topic of that assignment below, and replace "Your Name" with your actual name.
+\title{Simple Derivation}
+\author{Shunri Zheng}
+\date{\today}
+
+
+
+
+\begin{document}
+\maketitle
+
+
+
+\begin{equation}
+    \begin{split}
+        f_X(x) & =\int_0^{\infty} f_{X \mid w}(x) f_w(w) d w \\ 
+        & \propto \int_0^{\infty} \frac{1}{\sqrt{w}} \exp \left(-\frac{x^2}{2 w}\right) w^{-\frac{v}{2}-1} \exp \left(-\frac{v}{2 w}\right) d w \\ 
+        & =\int_0^{\infty} w^{-\frac{v+1}{2}-1} \exp \left(-\frac{x^2+v}{2 w}\right) d w \\ 
+        & =\Gamma\left(\frac{v+1}{2}\right)\left(\frac{x^2+v}{2}\right)^{-\frac{v+1}{2}}
+    \end{split}
+\end{equation}
+
+
+\begin{equation}
+    \begin{split}
+        f_W(w|x) & =\frac{f_{X \mid w}(x) f_w(w)}{f_X(x)} \\  
+        & =\frac{\frac{1}{\sqrt{w}} \exp \left(-\frac{x^2}{2 w}\right) w^{-\frac{v}{2}-1} \exp \left(-\frac{v}{2 w}\right)}{\Gamma\left(\frac{v+1}{2}\right)\left(\frac{x^2+v}{2}\right)^{-\frac{v+1}{2}}} \\
+        & \propto w^{-\frac{v+1}{2}-1} \exp \left(-\frac{x^2+v}{2 w}\right) 
+    \end{split}
+\end{equation}
+
+Thus we have the following result:
+$w|x$ is an inverse gamma distribution with parameters $\alpha = \frac{v+1}{2}$ and $\beta = \frac{x^2+v}{2}$.
+Now, assuming there exists a known patch of $X = \{x_1,x_2,...,x_n\}$,
+
+
+\begin{equation}
+    \begin{split}
+        f_W(w|X) & =f_w(w)\prod_{i=1}^{n} f_x(x|w) \\
+        &\propto w^{-\frac{v+n}{2}-1} \exp \left(-\frac{\sum\limits_{i=1}^n x_i^2+v}{2 w}\right) 
+    \end{split}
+\end{equation}
+
+$w|X$ is an inverse gamma distribution with parameters $\alpha = \frac{v+n}{2}$ and $\beta = \frac{\sum\limits_{i=1}^n x_i^2+v}{2}$.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
