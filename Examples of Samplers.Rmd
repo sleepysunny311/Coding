@@ -226,6 +226,46 @@ The conditional pdf $f(U|V)$ is:
 f(U|V)=\dfrac{f(U,V)}{f(V)}= \dfrac{1}{1-2|V|}\mathbb{I}_{|V| \leq \frac{1}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}
 \end{equation}
 
+
+```{r}
+set.seed(20230225)
+
+
+# Define the mixture parameters
+p1 <- 1/5
+p2 <- 4/5
+mu1 <- c(-5, -5)
+mu2 <- c(5, 5)
+sigma <- diag(2)
+
+# Define the PDF function
+pdf_mixture <- function(x, p1, p2, mu1, mu2, sigma) {
+  dens1 <- p1 * dmvnorm(x, mean = mu1, sigma = sigma)
+  dens2 <- p2 * dmvnorm(x, mean = mu2, sigma = sigma)
+  return(dens1 + dens2)
+}
+
+gradient_mixture <- function(x, p1, p2, mu1, mu2, sigma){
+  dens1 <- p1 * dmvnorm(x, mean = mu1, sigma = sigma)
+  dens2 <- p2 * dmvnorm(x, mean = mu2, sigma = sigma)
+  numer <- dens1 + dens2
+  grad_x1 <- (p1 * dmvnorm(x, mean = mu1, sigma = sigma) / numer) *(-0.5) * solve(sigma) %*% (x - mu1)
+  grad_x2 <- (p2 * dmvnorm(x, mean = mu2, sigma = sigma) / numer) *(-0.5) * solve(sigma) %*% (x - mu2)
+return(grad_x1+grad_x2)
+}
+
+logpdf<-function(x){
+  log(pdf_mixture(x, p1, p2, mu1, mu2, sigma))
+}
+
+
+pdf_mixture(c(5,5), p1, p2, mu1, mu2, sigma)
+gradient_mixture(c(5,4), p1, p2, mu1, mu2, sigma)
+
+```
+
+
+
 ### Gibbs Sampler Implementation
 
 Gibbs sampler for (U,V) is implemented as follows:
@@ -233,68 +273,49 @@ Gibbs sampler for (U,V) is implemented as follows:
 ```{r}
 set.seed(20230225)
 
-v_given_u <- function(u, c){
-    if(u <= c/2){
-        return(runif(1, -u, u))
-    }else if(u <= 1-c/2){
-        return(runif(1, -c/2, c/2))
-    }else{
-        return(runif(1, u-1, 1-u))
+x_given_y <- function(y, p1, p2, mu1, mu2, sigma) {
+    if (runif(1) < p1 / (p1 + p2)) {
+        return(rnorm(1, mean = mu1[1]+ sigma[2,2] / sigma[1,1] * (y - mu1[2]), sd = sqrt(sigma[1,1] - sigma[1,2]^2 / sigma[2,2])))
+    } else {
+        return(rnorm(1, mean = mu2[1]+ sigma[2,2] / sigma[1,1] * (y - mu2[2]), sd = sqrt(sigma[1,1] - sigma[1,2]^2 / sigma[2,2])))
     }
 }
 
-u_given_v <- function(v, c){
-    return(runif(1, abs(v), 1-abs(v)))
+y_given_x  <- function(x, p1, p2, mu1, mu2, sigma){
+    if (runif(1) < p1 / (p1 + p2)) {
+        return(rnorm(1, mean = mu1[2]+ sigma[1,1] / sigma[2,2] * (x - mu1[1]), sd = sqrt(sigma[2,2] - sigma[2,1]^2 / sigma[1,1])))
+    } else {
+        return(rnorm(1, mean = mu2[2]+ sigma[1,1] / sigma[2,2] * (x - mu2[1]), sd = sqrt(sigma[2,2] - sigma[2,1]^2 / sigma[1,1])))
+    }
 }
 
-sampleGibbs2 <- function(start.u, start.v,c, n.sims,burnin=0){
+sampleGibbs2 <- function(start.x, start.y, c, n.sims, burnin){
 
     # initialize the chain
     chain <- matrix(NA, nrow=n.sims, ncol=2)
-    chain[1,] <- c(start.u, start.v)
+    chain[1,] <- c(start.x, start.y)
 
     # loop through the chain
     for(i in 2:n.sims){
-        chain[i,1] <- u_given_v(chain[i-1,2], c)
-        chain[i,2] <- v_given_u(chain[i,1], c)
+        chain[i,1] <- x_given_y(chain[i-1,1], p1, p2, mu1, mu2, sigma)
+        chain[i,2] <- y_given_x(chain[i-1,2], p1, p2, mu1, mu2, sigma)
     }
 
     # return the chain
     return(chain[(burnin+1):n.sims,])
 }
 
-Samples_From_Gibbs1 = sampleGibbs2(0.5,0.5,0.25,11000,1000)
-Samples_From_Gibbs2 = sampleGibbs2(0.5,0.5,0.05,11000,1000)
-Samples_From_Gibbs3 = sampleGibbs2(0.5,0.5,0.02,11000,1000)
+Samples_From_Gibbs1 = sampleGibbs2(0,0,0.25,11000,1000)
 ```
 
 ### Traceplots and Scatterplots
 
 ```{r}
 ts.plot(Samples_From_Gibbs1[,1], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="u", main="Trace plot of u for c=0.25")
+ ylab="x", main="Trace plot of x")
 ts.plot(Samples_From_Gibbs1[,2], type="l", col="black", lwd=1, xlab="Iteration",
-ylab="v", main="Trace plot of v for c=0.25")
-ggplot(data.frame(Samples_From_Gibbs1), aes(x=Samples_From_Gibbs1[,1], y=Samples_From_Gibbs1[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (u,v) for c=0.25")
-par(mfrow=c(3,1))
-```
-
-```{r}
-ts.plot(Samples_From_Gibbs2[,1], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="u", main="Trace plot of u for c=0.05")
-ts.plot(Samples_From_Gibbs2[,2], type="l", col="black", lwd=1, xlab="Iteration",
-ylab="v", main="Trace plot of v for c=0.05")
-ggplot(data.frame(Samples_From_Gibbs2), aes(x=Samples_From_Gibbs2[,1], y=Samples_From_Gibbs2[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (u,v) for c=0.05")
-par(mfrow=c(3,1))
-```
-
-```{r}
-ts.plot(Samples_From_Gibbs3[,1], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="u", main="Trace plot of u for c=0.02")
-ts.plot(Samples_From_Gibbs3[,2], type="l", col="black", lwd=1, xlab="Iteration",
-ylab="v", main="Trace plot of v for c=0.02")
-ggplot(data.frame(Samples_From_Gibbs3), aes(x=Samples_From_Gibbs3[,1], y=Samples_From_Gibbs3[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (u,v) for c=0.02")
-par(mfrow=c(3,1))
+ylab="y", main="Trace plot of y")
+ggplot(data.frame(Samples_From_Gibbs1), aes(x=Samples_From_Gibbs1[,1], y=Samples_From_Gibbs1[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (x,y)")
 ```
 
 ### Metropolis-Hastings Sampler Implementation
@@ -332,37 +353,7 @@ sampleL <- function(start.a, start.b,c, n.sims,burnin=0){}
 
 ```
 
-```{r}
-set.seed(20230225)
 
-
-# Define the mixture parameters
-p1 <- 1/5
-p2 <- 4/5
-mu1 <- c(-5, -5)
-mu2 <- c(5, 5)
-sigma <- diag(2)
-
-# Define the PDF function
-pdf_mixture <- function(x, p1, p2, mu1, mu2, sigma) {
-  dens1 <- p1 * dmvnorm(x, mean = mu1, sigma = sigma)
-  dens2 <- p2 * dmvnorm(x, mean = mu2, sigma = sigma)
-  return(dens1 + dens2)
-}
-
-gradient_mixture <- function(x, p1, p2, mu1, mu2, sigma){
-  dens1 <- p1 * dmvnorm(x, mean = mu1, sigma = sigma)
-  dens2 <- p2 * dmvnorm(x, mean = mu2, sigma = sigma)
-  numer <- dens1 + dens2
-  grad_x1 <- (p1 * dmvnorm(x, mean = mu1, sigma = sigma) / numer) *(-0.5) * solve(sigma) %*% (x - mu1)
-  grad_x2 <- (p2 * dmvnorm(x, mean = mu2, sigma = sigma) / numer) *(-0.5) * solve(sigma) %*% (x - mu2)
-return(grad_x1+grad_x2)
-}
-
-pdf_mixture(c(5,5), p1, p2, mu1, mu2, sigma)
-gradient_mixture(c(5,4), p1, p2, mu1, mu2, sigma)
-
-```
 
 
 
@@ -373,14 +364,15 @@ gradient_mixture(c(5,4), p1, p2, mu1, mu2, sigma)
 
 set.seed(20230225)
 sampleMH <- function(start.a, start.b, n.sims,burnin=0){
-
+noise_cov <- matrix(diag(0.1),2,2)
 # initialize the chain
 chain <- matrix(NA, nrow=n.sims, ncol=2)
 chain[1,] <- c(start.a, start.b)
 
 # loop through the chain    
 for(i in 2:n.sims){
-    new.a <- rnorm(2,chain[i-1],0.1)
+    noise = rmvnorm(0, sigma=noise_cov)
+    new.a <- chain[i-1,] + noise
     if(pdf_mixture(new.a,p1,p2,mu1,mu2,sigma) <= 0){
         chain[i,] <- chain[i-1,]
     } else{
