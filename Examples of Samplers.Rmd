@@ -21,210 +21,6 @@ library(mvtnorm)
 ```
 
 
-$\kappa$
-
-
-# Question 4
-
-## (a)
-
-Since $0\leq |x-y| < c$, WLOG, we only need to discuss the three cases:
-\begin{enumerate}
-\item $0< c \leq 0.5$
-\item $0.5 < c < 1$
-\item $c \geq 1$
-\end{enumerate}
-\subsection{Case 1: $0< c \leq 0.5$}
-The conditional pdf $f(y|x)$ is:
-\begin{equation}
-f(y|x)=\dfrac{f(x,y)}{f(x)}=\begin{cases}
-\dfrac{1}{\int_{0}^{x+c}dy}=1/(x+c)\mathbb{I}_{0\leq y \leq x+c}, & \text{if } 0\leq x \leq c\\
-\dfrac{1}{\int_{x-c}^{x+c}dy}=1/(2c)\mathbb{I}_{x-c\leq y \leq x+c}, & \text{if } c\leq x \leq 1-c\\
-\dfrac{1}{\int_{x-c}^{1}dy}=1/(1-x+c)\mathbb{I}_{x-c\leq y \leq 1}, & \text{if } 1-c\leq x \leq 1\\
-\end{cases}
-\end{equation}
-Similarly, the conditional pdf $f(x|y)$ is:
-\begin{equation}
-f(x|y)=\dfrac{f(x,y)}{f(y)}=\begin{cases}
-\dfrac{1}{\int_{0}^{y+c}dx}=1/(y+c)\mathbb{I}_{0\leq x \leq y+c}, & \text{if } 0\leq y \leq c\\
-\dfrac{1}{\int_{y-c}^{y+c}dx}=1/(2c)\mathbb{I}_{y-c\leq x \leq y+c}, & \text{if } c\leq y \leq 1-c\\
-\dfrac{1}{\int_{y-c}^{1}dx}=1/(1-y+c)\mathbb{I}_{y-c\leq x \leq 1}, & \text{if } 1-c\leq y \leq 1\\
-\end{cases}
-\end{equation}
-
-\subsection{Case 2: $0.5 < c < 1$}
-The conditional pdf $f(y|x)$ is:
-\begin{equation}
-f(y|x)=\dfrac{f(x,y)}{f(x)}=\begin{cases}
-\dfrac{1}{\int_{0}^{x+c}dy}=1/(x+c)\mathbb{I}_{0\leq y \leq x+c}, & \text{if } 0\leq x \leq 1-c\\
-\dfrac{1}{\int_{0}^{1}dy}=\mathbb{I}_{0\leq y \leq 1}, & \text{if } 1-c\leq x \leq c\\
-\dfrac{1}{\int_{x-c}^{1}dy}=1/(1-x+c)\mathbb{I}_{x-c\leq y \leq 1}, & \text{if } c\leq x \leq 1\\
-\end{cases}
-\end{equation}
-Similarly, the conditional pdf $f(x|y)$ is:
-\begin{equation}
-f(x|y)=\dfrac{f(x,y)}{f(y)}=\begin{cases}
-\dfrac{1}{\int_{0}^{y+c}dx}=1/(y+c)\mathbb{I}_{0\leq x \leq y+c}, & \text{if } 0\leq y \leq 1-c\\
-\dfrac{1}{\int_{0}^{1}dx}=\mathbb{I}_{0\leq x \leq 1}, & \text{if } 1-c\leq y \leq c\\
-\dfrac{1}{\int_{y-c}^{1}dx}=1/(1-y+c)\mathbb{I}_{y-c\leq x \leq 1}, & \text{if } c\leq y \leq 1\\
-\end{cases}
-\end{equation}
-
-\subsection{Case 3: $c \geq 1$}
-The conditional pdf $f(y|x)$ is:
-\begin{equation}
-f(y|x)=\dfrac{f(x,y)}{f(x)}=\mathbb{I}_{0\leq y \leq 1}, \text{if } 0\leq x \leq 1 \\
-\end{equation}
-Similarly, the conditional pdf $f(x|y)$ is:
-\begin{equation}
-f(x|y)=\dfrac{f(x,y)}{f(y)}=\mathbb{I}_{0\leq x \leq 1}, \text{if } 0\leq y \leq 1\\
-\end{equation}
-
-## (b)
-
-Gibbs sampler for f(x,y) is:
-
-```{r}
-set.seed(20230225)
-x_given_y <- function(y, c){
-    if(y <= c){
-        return(runif(1, 0, y+c))
-    }else if(y <= 1-c){
-        return(runif(1, y-c, y+c))
-    }else{
-        return(runif(1, y-c, 1))
-    }
-}
-
-y_given_x <- function(x, c){
-    if(x <= c){
-        return(runif(1, 0, x+c))
-    }else if(x <= 1-c){
-        return(runif(1, x-c, x+c))
-    }else{
-        return(runif(1, x-c, 1))
-    }
-}
-
-
-sampleGibbs <- function(start.a, start.b,c, n.sims,burnin=0){
-
-# initialize the chain
-chain <- matrix(NA, nrow=n.sims, ncol=2)
-chain[1,] <- c(start.a, start.b)
-
-# loop through the chain
-for(i in 2:n.sims){
-    chain[i,1] <- x_given_y(chain[i-1,2], c)
-    chain[i,2] <- y_given_x(chain[i,1], c)
-}
-
-# return the chain
-return(chain[(burnin+1):n.sims,])
-}
-
-
-
-Samples_From_Gibbs1 = sampleGibbs(0.5, 0.5,0.25, 11000, 1000)
-Samples_From_Gibbs2 = sampleGibbs(0.5, 0.5,0.05, 11000, 1000)
-Samples_From_Gibbs3 = sampleGibbs(0.5, 0.5,0.02, 11000, 1000)
-```
-
-## (c)
-
-```{r}
-
-ts.plot(Samples_From_Gibbs1[,1], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="x", main="Trace plot of x for c=0.25")
-ts.plot(Samples_From_Gibbs1[,2], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="y", main="Trace plot of y for c=0.25")
-ggplot(data.frame(Samples_From_Gibbs1), aes(x = Samples_From_Gibbs1[,1],
- y = Samples_From_Gibbs1[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatter plot of x and y for c=0.25")
- par(mfrow=c(3,1))
-```
-
-```{r}
-
-
-ts.plot(Samples_From_Gibbs2[,1], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="x", main="Trace plot of x for c=0.05")
-ts.plot(Samples_From_Gibbs2[,2], type="l", col="black", lwd=1, xlab="Iteration",
-    ylab="y", main="Trace plot of y for c=0.05")
-ggplot(data.frame(Samples_From_Gibbs2), aes(x = Samples_From_Gibbs2[,1],
-    y = Samples_From_Gibbs2[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatter plot of x and y for c=0.05")
-par(mfrow=c(3,1))
-```
-    
-```{r}
-
-ts.plot(Samples_From_Gibbs3[,1], type="l", col="black", lwd=1, xlab="Iteration",
-    ylab="x", main="Trace plot of x for c=0.02")
-ts.plot(Samples_From_Gibbs3[,2], type="l", col="black", lwd=1, xlab="Iteration",
-    ylab="y", main="Trace plot of y for c=0.02")
-ggplot(data.frame(Samples_From_Gibbs3), aes(x = Samples_From_Gibbs3[,1],
-    y = Samples_From_Gibbs3[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatter plot of x and y for c=0.02")
-par(mfrow=c(3,1))
-```
-
-## (d)
-
-As $c$ decreases, the trace plots of x and y become more correlated. The correlation between x and y is approximately 1 as $c$ approaches 0. It violates the independence assumption of the Gibbs sampler. So we can see that when $c=0.02$, the marginal convergence rate is slow for both x and y.
-
-
-## (e)
-
-### Gibbs sampler for f(x,y)
-
-Given
-$$U=\dfrac{X+Y}{2}, V=\dfrac{X-Y}{2}$$
-Thus,
-$$X=U+V, Y=U-V$$
-Jacobi matrix is:
-$$J=\begin{bmatrix}
-\dfrac{\partial U}{\partial X} & \dfrac{\partial U}{\partial Y}\\
-\dfrac{\partial V}{\partial X} & \dfrac{\partial V}{\partial Y}
-\end{bmatrix}=\begin{bmatrix}
-1&1\\
-1&-1\\
-\end{bmatrix}$$
-Thus, the transformed pdf is:
-$$f(U,V)\propto \mathbb{I}_{|2V| \leq c} \mathbb{I}_{|U+V| \leq 1} \mathbb{I}_{|U-V| \leq 1} |-2|=2\mathbb{I}_{|V| \leq \frac{c}{2}} \mathbb{I}_{|U+V| \leq 1} \mathbb{I}_{|U-V| \leq 1}$$
-Since $0\leq |V| \leq \frac{c}{2}$, we only need to consider two cases:
-\begin{enumerate}
-\item $0< c \leq 1$
-\item $c > 1$
-\end{enumerate}
-#### Case 1: $0< c \leq 1$
-
-
-The conditional pdf $f(V|U)$ is:
-\begin{equation}
-f(V|U)=\dfrac{f(U,V)}{f(U)}=\begin{cases}
-\dfrac{1}{\int_{-U}^{U}f(U,V)dV}= \dfrac{1}{2U}\mathbb{I}_{|V| \leq \frac{c}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}, & \text{if } U \leq \dfrac{c}{2}\\
-\dfrac{1}{\int_{-\dfrac{c}{2}}^{\dfrac{c}{2}}f(U,V)dV}= \dfrac{1}{c}\mathbb{I}_{|V| \leq \frac{c}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}, & \text{if } \dfrac{c}{2} \leq U \leq 1-\dfrac{c}{2}\\
-\dfrac{1}{\int_{U-1}^{1-U}f(U,V)dV}= \dfrac{1}{2(1-U)}\mathbb{I}_{|V| \leq \frac{c}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}, & \text{if } 1-\dfrac{c}{2} \leq U \leq 1\\
-\end{cases}
-\end{equation}
-
-The conditional pdf $f(U|V)$ is:
-\begin{equation}
-f(U|V)=\dfrac{f(U,V)}{f(V)}=\dfrac{1}{\int_{|V|}^{1-|V|}f(U,V)dU}= \dfrac{1}{1-2|V|}\mathbb{I}_{|V| \leq \frac{c}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}
-\end{equation}
-
-#### Case 2: $c > 1$
-
-The conditional pdf $f(V|U)$ is:
-\begin{equation}
-f(V|U)=\dfrac{f(U,V)}{f(U)}=\begin{cases}
-\dfrac{1}{\int_{-U}^{U}f(U,V)dV}= \dfrac{1}{2U}\mathbb{I}_{|V| \leq \frac{1}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}, & \text{if } U \leq \dfrac{1}{2}\\
-\dfrac{1}{\int_{U-1}^{1-U}f(U,V)dV}= \dfrac{1}{2(1-U)}\mathbb{I}_{|V| \leq \frac{1}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}, & \text{if } \dfrac{1}{2} \leq U \leq 1\\
-\end{cases}
-\end{equation}
-
-The conditional pdf $f(U|V)$ is:
-\begin{equation}
-f(U|V)=\dfrac{f(U,V)}{f(V)}= \dfrac{1}{1-2|V|}\mathbb{I}_{|V| \leq \frac{1}{2}} \mathbb{I}_{0\leq|U+V| \leq 1} \mathbb{I}_{0\leq|U-V| \leq 1}
-\end{equation}
 
 
 ```{r}
@@ -275,17 +71,17 @@ set.seed(20230225)
 
 x_given_y <- function(y, p1, p2, mu1, mu2, sigma) {
     if (runif(1) < p1 / (p1 + p2)) {
-        return(rnorm(1, mean = mu1[1]+ sigma[2,2] / sigma[1,1] * (y - mu1[2]), sd = sqrt(sigma[1,1] - sigma[1,2]^2 / sigma[2,2])))
+        return(rnorm(1, mean = mu1[1]+ sigma[1,2] / sigma[1,1] * (y - mu1[2]), sd = sqrt(sigma[1,1] - sigma[1,2]^2 / sigma[2,2])))
     } else {
-        return(rnorm(1, mean = mu2[1]+ sigma[2,2] / sigma[1,1] * (y - mu2[2]), sd = sqrt(sigma[1,1] - sigma[1,2]^2 / sigma[2,2])))
+        return(rnorm(1, mean = mu2[1]+ sigma[1,2] / sigma[1,1] * (y - mu2[2]), sd = sqrt(sigma[1,1] - sigma[1,2]^2 / sigma[2,2])))
     }
 }
 
 y_given_x  <- function(x, p1, p2, mu1, mu2, sigma){
     if (runif(1) < p1 / (p1 + p2)) {
-        return(rnorm(1, mean = mu1[2]+ sigma[1,1] / sigma[2,2] * (x - mu1[1]), sd = sqrt(sigma[2,2] - sigma[2,1]^2 / sigma[1,1])))
+        return(rnorm(1, mean = mu1[2]+ sigma[2,1] / sigma[2,2] * (x - mu1[1]), sd = sqrt(sigma[2,2] - sigma[2,1]^2 / sigma[1,1])))
     } else {
-        return(rnorm(1, mean = mu2[2]+ sigma[1,1] / sigma[2,2] * (x - mu2[1]), sd = sqrt(sigma[2,2] - sigma[2,1]^2 / sigma[1,1])))
+        return(rnorm(1, mean = mu2[2]+ sigma[2,1] / sigma[2,2] * (x - mu2[1]), sd = sqrt(sigma[2,2] - sigma[2,1]^2 / sigma[1,1])))
     }
 }
 
@@ -297,15 +93,15 @@ sampleGibbs2 <- function(start.x, start.y, c, n.sims, burnin){
 
     # loop through the chain
     for(i in 2:n.sims){
-        chain[i,1] <- x_given_y(chain[i-1,1], p1, p2, mu1, mu2, sigma)
-        chain[i,2] <- y_given_x(chain[i-1,2], p1, p2, mu1, mu2, sigma)
+        chain[i,1] <- x_given_y(chain[i-1,2], p1, p2, mu1, mu2, sigma)
+        chain[i,2] <- y_given_x(chain[i,1], p1, p2, mu1, mu2, sigma)
     }
 
     # return the chain
     return(chain[(burnin+1):n.sims,])
 }
 
-Samples_From_Gibbs1 = sampleGibbs2(0,0,0.25,11000,1000)
+Samples_From_Gibbs1 = sampleGibbs2(0,0,0.25,5000,1000)
 ```
 
 ### Traceplots and Scatterplots
@@ -317,6 +113,11 @@ ts.plot(Samples_From_Gibbs1[,2], type="l", col="black", lwd=1, xlab="Iteration",
 ylab="y", main="Trace plot of y")
 ggplot(data.frame(Samples_From_Gibbs1), aes(x=Samples_From_Gibbs1[,1], y=Samples_From_Gibbs1[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (x,y)")
 ```
+```{r}
+mean(Samples_From_Gibbs1[,1])
+mean(Samples_From_Gibbs1[,2])
+```
+
 
 ### Metropolis-Hastings Sampler Implementation
 
@@ -364,14 +165,13 @@ sampleL <- function(start.a, start.b,c, n.sims,burnin=0){}
 
 set.seed(20230225)
 sampleMH <- function(start.a, start.b, n.sims,burnin=0){
-noise_cov <- matrix(diag(0.1),2,2)
 # initialize the chain
 chain <- matrix(NA, nrow=n.sims, ncol=2)
 chain[1,] <- c(start.a, start.b)
-
+accept = 0
 # loop through the chain    
 for(i in 2:n.sims){
-    noise = rmvnorm(0, sigma=noise_cov)
+    noise = rnorm(2,0,5)
     new.a <- chain[i-1,] + noise
     if(pdf_mixture(new.a,p1,p2,mu1,mu2,sigma) <= 0){
         chain[i,] <- chain[i-1,]
@@ -379,12 +179,14 @@ for(i in 2:n.sims){
         ratio <- pdf_mixture(new.a,p1,p2,mu1,mu2,sigma)/pdf_mixture(chain[i-1,],p1,p2,mu1,mu2,sigma)
     if(runif(1) < ratio){
         chain[i,] <- new.a
+        accept = accept+1
     }else{
         chain[i,] <- chain[i-1,]
     }    
 }
 }
 # return the chain
+print(accept/(n.sims-1))
 return(chain[(burnin+1):n.sims,])
 }
 
@@ -402,6 +204,11 @@ ts.plot(Samples_From_MH[,2], type="l", col="black", lwd=1, xlab="Iteration",
 ylab="v", main="Trace plot of v for c=0.25")
 ggplot(data.frame(Samples_From_MH), aes(x=Samples_From_MH[,1], y=Samples_From_MH[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (x,y) using Metropolis-Hastings")
 ```
+
+```{r}
+print(accept)
+```
+
 
 
 
@@ -428,19 +235,21 @@ for(i in 2:n.sims){
 return(chain[(burnin+1):n.sims,])
 }
 
-Samples_From_Langevin = sampleL(0,0,11000,1000,0.1)
+Samples_From_Langevin = sampleL(-1,0,11000,1000,0.1)
 
+
+ts.plot(Samples_From_Langevin[,1], type="l", col="black", lwd=1, xlab="Iteration",
+ ylab="u", main="Trace plot of u for c=0.25")
+ts.plot(Samples_From_Langevin[,2], type="l", col="black", lwd=1, xlab="Iteration",
+ylab="v", main="Trace plot of v for c=0.25")
+ggplot(data.frame(Samples_From_Langevin), aes(x=Samples_From_Langevin[,1], y=Samples_From_Langevin[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (x,y) using Langevin Sampler")
 ```
 
 
 ### Traceplots and Scatterplots
 
 ```{r}
-ts.plot(Samples_From_Langevin[,1], type="l", col="black", lwd=1, xlab="Iteration",
- ylab="u", main="Trace plot of u for c=0.25")
-ts.plot(Samples_From_Langevin[,2], type="l", col="black", lwd=1, xlab="Iteration",
-ylab="v", main="Trace plot of v for c=0.25")
-ggplot(data.frame(Samples_From_Langevin), aes(x=Samples_From_Langevin[,1], y=Samples_From_Langevin[,2])) + geom_point(alpha = 0.5,size = 0.5,color = "blue") + ggtitle("Scatterplot of (x,y) using Langevin Sampler")
+
 ```
 
 
